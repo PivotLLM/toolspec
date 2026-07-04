@@ -135,6 +135,27 @@ func (d ToolDefinition) DefaultAllowed() bool {
 // Allow is a convenience for setting DefaultAllow in a literal: DefaultAllow: toolspec.Allow(true).
 func Allow(v bool) *bool { return &v }
 
+// DataStore is an optional key-value persistence capability a host may provide
+// to tools that must persist small records across restarts — e.g. OAuth tokens,
+// refresh tokens, or per-service credentials. Values are opaque bytes (the tool
+// owns their encoding); records are grouped by a collection so a host can
+// partition them (a table, bucket, or directory per collection). Expiry, if
+// any, is the tool's concern — encode it in the value.
+//
+// A nil DataStore (Deps.DB == nil) means the host offers no persistence: a tool
+// that needs it must degrade gracefully (e.g. support only stateless auth). The
+// store a provider receives is host-scoped — Claw hands each agent its own — so
+// tools use flat keys within a collection and rely on the host for isolation.
+type DataStore interface {
+	// Get returns the value stored under (collection, key). ok is false when no
+	// such record exists; err is reserved for real backend failures.
+	Get(ctx context.Context, collection, key string) (value []byte, ok bool, err error)
+	// Set writes value under (collection, key), overwriting any prior value.
+	Set(ctx context.Context, collection, key string, value []byte) error
+	// Delete removes (collection, key). Deleting an absent record is not an error.
+	Delete(ctx context.Context, collection, key string) error
+}
+
 // Deps is dependency injection handed to a provider at construction time.
 // Capabilities a host may not offer are nilable; a provider whose tools need a
 // nil capability should omit those tools.
@@ -142,6 +163,14 @@ type Deps struct {
 	Cfg       any // *config.Config in Claw; hosts type-assert
 	AgentID   string
 	Workspace string
+	// ConfigDir is a host-provided directory where a provider finds its own
+	// config files and any environment/secret files. "" ⇒ unset (the provider
+	// falls back to its own default or has no file-based config). Claw passes a
+	// per-provider dir (e.g. <data>/fusion); hosts that don't use it leave it "".
+	ConfigDir string
+	// DB is an optional persistence capability (see DataStore). nil ⇒ the host
+	// offers no persistence; tools that need it must degrade.
+	DB DataStore
 	// Spawn launches sub-agent workers. When non-nil it holds the host's spawner
 	// implementation; recover it with a type assertion to the host's spawner type.
 	// nil ⇒ this host cannot launch sub-agents. The host injects one robust spawner
