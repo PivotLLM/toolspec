@@ -115,6 +115,16 @@ type ToolDefinition struct {
 	// hosts may ignore them).
 	Category  string
 	ConfigKey string
+
+	// Group names the tool set this tool belongs to (e.g. a service or upstream
+	// server). Hosts that hide tools behind progressive discovery use it with
+	// RevealTogether to reveal a whole set at once. Empty ⇒ ungrouped.
+	Group string
+	// RevealTogether asks a discovery-aware host to reveal every tool sharing this
+	// tool's Group as soon as any one of them is revealed, so a small, cohesive set
+	// (e.g. one service's tools) is unlocked in a single search instead of one tool
+	// at a time. Hosts without progressive discovery ignore it.
+	RevealTogether bool
 }
 
 // Schema returns the tool's JSON Schema: RawSchema verbatim when set, otherwise
