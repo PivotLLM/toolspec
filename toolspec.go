@@ -54,8 +54,9 @@ type Result struct {
 	Silent  bool     `json:"silent,omitempty"`
 	IsError bool     `json:"is_error,omitempty"`
 	Async   bool     `json:"async,omitempty"`
-	Media   []string `json:"media,omitempty"` // media-store refs (host resolves)
-	Err     error    `json:"-"`               // internal detail; not the control-flow signal
+	Media   []string `json:"media,omitempty"`  // media-store refs (host resolves)
+	Images  []string `json:"images,omitempty"` // base64 "data:<mime>;base64,…" URIs for the model to view (host delivers to vision-capable models)
+	Err     error    `json:"-"`                // internal detail; not the control-flow signal
 }
 
 // ToolCall bundles everything one invocation needs. It is per-call and never
