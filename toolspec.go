@@ -1,7 +1,7 @@
-// Package toolspec defines the shared, transport-neutral tool contract for the
-// ClawEh ecosystem. It is deliberately dependency-free (standard library only)
-// so it can be imported by every tool package, by ClawEh's registry/bridge, and
-// by external hosts (e.g. Maestro) as a standalone module without import cycles.
+// Package toolspec defines the shared, transport-neutral tool contract between
+// tool packages and the hosts that run them. It is deliberately dependency-free
+// (standard library only) so it can be imported by every tool package, by a
+// host's registry/bridge, and by external hosts (e.g. Maestro) as a standalone module without import cycles.
 //
 // A tool package implements ToolProvider and returns ToolDefinitions with BARE
 // names (e.g. "read"). The aggregator that pulls a provider in supplies the
@@ -45,9 +45,9 @@ type ToolHints struct {
 	OpenWorld   *bool
 }
 
-// Result is the structured return of a tool. It is a field-for-field superset of
-// the legacy pkg/tools.ToolResult so nothing is lost as Claw adopts it; hosts
-// that only want text read ForLLM.
+// Result is the structured return of a tool. It carries model-facing and
+// user-facing content, media and status flags so a host loses nothing adopting it;
+// hosts that only want text read ForLLM.
 type Result struct {
 	ForLLM  string   `json:"for_llm"`            // required: model-facing content
 	ForUser string   `json:"for_user,omitempty"` // optional: routed to the human by the host
@@ -112,8 +112,8 @@ type ToolDefinition struct {
 	// allowed. A tool must opt in with a pointer to true to be on by default.
 	DefaultAllow *bool
 
-	// Host metadata (Claw uses these for GUI grouping + config gating; other
-	// hosts may ignore them).
+	// Host metadata (a host may use these for GUI grouping + config gating;
+	// other hosts may ignore them).
 	Category  string
 	ConfigKey string
 
@@ -155,7 +155,7 @@ func Allow(v bool) *bool { return &v }
 //
 // A nil DataStore (Deps.DB == nil) means the host offers no persistence: a tool
 // that needs it must degrade gracefully (e.g. support only stateless auth). The
-// store a provider receives is host-scoped — Claw hands each agent its own — so
+// store a provider receives is host-scoped — e.g. one store per agent — so
 // tools use flat keys within a collection and rely on the host for isolation.
 type DataStore interface {
 	// Get returns the value stored under (collection, key). ok is false when no
@@ -171,13 +171,13 @@ type DataStore interface {
 // Capabilities a host may not offer are nilable; a provider whose tools need a
 // nil capability should omit those tools.
 type Deps struct {
-	Cfg       any // *config.Config in Claw; hosts type-assert
+	Cfg       any // host's own config type; providers type-assert
 	AgentID   string
 	Workspace string
 	// ConfigDir is a host-provided directory where a provider finds its own
 	// config files and any environment/secret files. "" ⇒ unset (the provider
-	// falls back to its own default or has no file-based config). Claw passes a
-	// per-provider dir (e.g. <data>/fusion); hosts that don't use it leave it "".
+	// falls back to its own default or has no file-based config). A host may pass a
+	// per-provider dir (e.g. <data>/<provider>); hosts that don't use it leave it "".
 	ConfigDir string
 	// DB is an optional persistence capability (see DataStore). nil ⇒ the host
 	// offers no persistence; tools that need it must degrade.
@@ -187,8 +187,8 @@ type Deps struct {
 	// nil ⇒ this host cannot launch sub-agents. The host injects one robust spawner
 	// here so any tool package (internal or external/MCP) can launch workers by DI.
 	Spawn any
-	// Host carries host-specific, strongly-typed dependencies (Claw passes its
-	// rich tools.ToolDeps here; providers type-assert).
+	// Host carries host-specific, strongly-typed dependencies (a host may pass
+	// its own rich dependency struct here; providers type-assert).
 	Host any
 }
 
@@ -198,7 +198,7 @@ type ToolProvider interface {
 }
 
 // HostMeta is optional provider metadata a host may use for config gating and
-// GUI grouping. Claw implements it; minimal hosts can skip it.
+// GUI grouping. Full-featured hosts use it; minimal hosts can skip it.
 type HostMeta interface {
 	Namespace() string
 	Description() string
@@ -206,7 +206,7 @@ type HostMeta interface {
 }
 
 // ParametersToSchema renders []Parameter as a JSON Schema object
-// ({type, properties, required}). Hosts that take a raw schema (Claw's MCP host,
+// ({type, properties, required}). Hosts that take a raw schema (an MCP host,
 // LLM tool definitions) use this; SDK-specific hosts may build options instead.
 func ParametersToSchema(params []Parameter) map[string]any {
 	properties := make(map[string]any, len(params))

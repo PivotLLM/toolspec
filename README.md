@@ -1,9 +1,9 @@
 # toolspec
 
 `github.com/PivotLLM/toolspec` is the shared, transport-neutral **tool contract**
-for the ClawEh ecosystem. It is deliberately dependency-free (standard library
-only) so it can be imported by tool packages, by ClawEh's registry/bridge, and by
-external software such as Maestro as a standalone module without import cycles.
+between tool packages and the hosts that run them. It is deliberately
+dependency-free (standard library only) so it can be imported by tool packages,
+by a host's registry/bridge, and by external software such as Maestro as a standalone module without import cycles.
 
 ## Model
 
